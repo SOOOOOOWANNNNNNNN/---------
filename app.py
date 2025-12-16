@@ -1,5 +1,9 @@
 import streamlit as st
 import google.generativeai as genai
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # [1] 페이지 설정
 st.set_page_config(page_title="우리 반 AI 선생님", page_icon="🤖")
@@ -8,6 +12,10 @@ st.caption("안전하고 정확한 정보를 알려주는 AI 선생님입니다.
 
 # [2] API 키 설정
 if "GEMINI_API_KEY" in st.secrets:
+if os.getenv("GOOGLE_API_KEY"):
+    api_key = os.getenv("GOOGLE_API_KEY")
+    genai.configure(api_key=api_key)
+elif "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
 else:
@@ -26,6 +34,7 @@ safety_system_prompt = """
 # [4] 모델 설정 (오류 방지를 위해 system_instruction 제거)
 # 구버전 라이브러리에서도 100% 작동하도록 기본 설정만 사용합니다.
 model = genai.GenerativeModel("gemini-2.5")
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 # [5] 세션 상태 초기화 (여기가 핵심!)
 # 시스템 설정을 '채팅 기록'의 맨 처음에 강제로 넣어서, AI가 선생님 역할을 하도록 만듭니다.
