@@ -39,7 +39,7 @@ safety_system_prompt = """
 
 # 모델 초기화 (위에서 만든 선생님 규칙을 적용)
 model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
+    model_name="gemini-pro",
     system_instruction=safety_system_prompt
 )
 
