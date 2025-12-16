@@ -1,85 +1,71 @@
 import streamlit as st
-import google.generativeai as genai
+import time
 
 # [설정] 페이지 기본 구성
-# 목적: 학생들이 접속했을 때 'AI 선생님'임을 직관적으로 알 수 있도록 제목과 아이콘 설정
 st.set_page_config(
-    page_title="초등학생을 위한 AI 선생님",
-    page_icon="🎓",
+    page_title="우리반 안전 지킴이 챗봇",
+    page_icon="⛑️",
     layout="centered"
 )
 
-# [UI] 헤더 및 안내 문구
-# 결과: 화면 상단에 큰 제목과 안전 수칙이 표시됨
-st.title("🎓 무엇이든 물어보세요! AI 선생님")
-st.write("안녕? 학교 공부하다가 모르는 게 생기면 물어봐!")
-st.info("비밀(이름, 주소, 전화번호)은 절대 말하면 안 돼요! 쉿! 🤫")
+# [UI] 헤더 영역
+st.title("⛑️ 4학년 안전 교육: 지진과 화산")
+st.write("지진이나 화산에 대해 궁금한 점을 물어보세요! (예: 지진이 뭐야? 대피는 어떻게 해?)")
+st.info("💡 이 챗봇은 정해진 질문에만 정확하게 대답하도록 만들어졌습니다.")
 
-# [보안] API 키 설정 및 예외 처리
-# 목적: .streamlit/secrets.toml 파일에서 비밀 키를 안전하게 가져오고, 없을 경우 오류를 방지함
-try:
-    # Streamlit Cloud 배포 환경과 로컬 환경 모두에서 작동하도록 비밀 키 호출
-    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-except Exception as e:
-    # 키가 설정되지 않았을 때 학생들에게는 보이지 않도록 개발자용 에러 로그만 남김
-    st.error("AI 선생님을 부를 수 없어요. (관리자에게 문의: API Key 누락)")
-    st.stop()
+# [데이터] 규칙 기반 AI를 위한 지식 데이터베이스 (Key-Value 방식)
+# 목적: 외부 AI 없이 빠르고 정확한 답변을 제공하며, 오개념을 방지함.
+knowledge_base = {
+    "지진": "지진이란 땅이 지구 내부의 힘을 받아 흔들리거나 갈라지는 현상을 말해요.",
+    "화산": "화산은 땅속 깊은 곳에 있던 마그마가 가스와 함께 분출하여 만들어진 산을 말해요.",
+    "마그마": "마그마는 땅속 깊은 곳에서 암석이 녹아 액체처럼 된 상태를 말해요.",
+    "용암": "용암은 마그마가 지표면 밖으로 나와서 가스가 빠져나가고 흐르는 것을 말해요.",
+    "규모": "규모는 지진 자체의 힘의 크기를 나타내는 단위예요. 숫자가 클수록 강력한 지진입니다.",
+    "진도": "진도는 어떤 장소에서 사람이 느끼는 흔들림의 정도나 피해 정도를 나타내는 기준이에요.",
+    "대피": "지진이 나면 책상 아래로 들어가 머리를 보호하고, 흔들림이 멈추면 운동장 같은 넓은 곳으로 대피해야 해요.",
+    "가방": "대피할 때는 두꺼운 책이나 가방으로 머리를 보호하는 것이 중요해요.",
+    "승강기": "지진이나 화재 발생 시 승강기(엘리베이터)는 절대 타면 안 돼요! 계단을 이용하세요.",
+    "백두산": "백두산은 우리나라의 대표적인 활화산이에요. 지금은 쉬고 있지만 언제든 다시 분화할 수 있어요."
+}
 
-# [AI 설정] 페르소나(Persona) 및 안전 규칙 정의 (프롬프트 엔지니어링)
-# 목적: AI가 무분별한 답변을 하지 않고, 초등학생 눈높이에 맞춰 교육적으로 답변하도록 역할을 부여함
-system_instruction = """
-당신은 초등학생(8~13세)을 지도하는 친절하고 다정한 'AI 선생님'입니다.
-다음 원칙을 철저히 지켜서 답변하세요:
-
-1. [눈높이 교육] 어려운 한자어나 전문 용어 대신, 초등학생이 이해하기 쉬운 비유와 예시를 사용하세요.
-2. [안전 제일] 폭력, 선정성, 혐오, 범죄와 관련된 질문은 "그건 대답해주기 어려운 질문이에요. 선생님이나 부모님께 여쭤볼까요?"라고 단호하지만 부드럽게 거절하세요.
-3. [개인정보 보호] 학생이 이름, 학교, 전화번호 등을 말하면 "개인정보는 소중해요. 여기에 적으면 안 돼요."라고 교육하세요.
-4. [사고력 확장] 정답을 바로 알려주기보다는, 학생이 스스로 생각할 수 있도록 힌트를 주거나 되물어보세요. (예: "좋은 질문이네! OO이는 어떻게 생각하니?")
-5. [공감과 격려] 학생의 질문에 칭찬을 먼저 해주고(예: "정말 기발한 생각이구나!"), 긍정적인 태도로 대화하세요.
-"""
-
-# [모델 로드] 설정한 페르소나를 적용하여 AI 모델 준비
-model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash", # 속도가 빠르고 효율적인 모델 선택
-    system_instruction=system_instruction
-)
-
-# [기능] 대화 내용 기억하기 (Session State)
-# 목적: 사용자가 새로고침하더라도 이전 대화 흐름이 끊기지 않고 유지되도록 저장소 생성
+# [기능] 대화 기록 초기화
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# [UI] 채팅 기록 표시
-# 결과: 저장된 대화 내용을 화면에 순서대로 말풍선 형태로 보여줌
+# [UI] 이전 대화 내용 표시
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# [상호작용] 사용자 질문 입력 처리
-# 목적: 사용자가 질문을 입력하고 엔터를 눌렀을 때만 반응하도록 함
-if prompt := st.chat_input("질문을 입력하고 엔터를 치세요..."):
+# [로직] 사용자 입력 처리 및 답변 생성
+if user_input := st.chat_input("궁금한 단어나 내용을 입력하세요..."):
     
-    # 1. 사용자의 질문을 화면에 표시하고 저장
+    # 1. 사용자 질문 표시
     with st.chat_message("user"):
-        st.markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
+        st.markdown(user_input)
+    st.session_state.messages.append({"role": "user", "content": user_input})
 
-    # 2. AI의 답변 생성 및 표시
-    with st.chat_message("assistant"):
-        message_placeholder = st.empty() # 답변이 타이핑되듯 나오게 하기 위한 빈 공간
-        full_response = ""
-        
-        try:
-            # AI에게 질문 전달 (현재 질문만 전달하여 토큰 절약 및 안전성 확보)
-            response = model.generate_content(prompt)
-            full_response = response.text
-            
-            # 답변 출력
-            message_placeholder.markdown(full_response)
-        except Exception as e:
-            # 오류 발생 시 친절한 안내 메시지 출력
-            full_response = "미안해, 잠깐 연결이 끊겼어. 다시 한번 말해줄래?"
-            message_placeholder.markdown(full_response)
+    # 2. 챗봇 답변 로직 (키워드 매칭 방식)
+    # 목적: 사용자의 문장에 핵심 키워드가 들어있는지 확인하여 답변 선택
+    response = ""
+    found = False
     
-    # 3. AI의 답변을 대화 기록에 저장
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
+    # 입력된 문장에서 키워드 찾기
+    for keyword, answer in knowledge_base.items():
+        if keyword in user_input:
+            response = f"**[{keyword}]**에 대해 물어봤구나!\n\n{answer}"
+            found = True
+            break
+    
+    # 키워드를 찾지 못한 경우
+    if not found:
+        response = "미안해, 아직 배우지 않은 내용이라 잘 모르겠어. 😅\n\n**'지진', '화산', '대피', '마그마', '승강기'** 같은 단어를 포함해서 물어봐 줄래?"
+
+    # 3. 답변 표시 (타이핑 효과)
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+        # 약간의 딜레이를 주어 생각하는 척 연출
+        time.sleep(0.5)
+        message_placeholder.markdown(response)
+        
+    st.session_state.messages.append({"role": "assistant", "content": response})
