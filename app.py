@@ -67,9 +67,6 @@ if "messages" not in st.session_state:
     ]
     st.session_state.messages = []
 
-# [6] 대화 기록 표시 (첫 번째 시스템 설정 대화는 화면에 안 보이게 숨김)
-# list slicing [2:]를 사용하여 사용자가 실제로 입력한 대화부터 보여줍니다.
-for message in st.session_state.messages[2:]:
 # [6] 대화 기록 표시
 # 목적: 저장된 대화 기록(messages)을 순서대로 읽어와 화면에 채팅 말풍선으로 보여주기 위함.
 # 결과: 사용자가 이전에 나눈 질문과 답변이 채팅창에 그대로 표시됨.
