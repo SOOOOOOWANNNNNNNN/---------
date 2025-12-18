@@ -89,17 +89,9 @@ if prompt:
         st.error("API 키가 설정되지 않았습니다. Secrets 설정을 확인해주세요.")
         st.stop()
 
-    # --------------------------------------------------------------------------
-    # [목적] 가장 안정적인 Gemini Pro 모델을 호출하여 API 통신을 수행합니다.
-    # [결과] 404 오류를 방지하고 AI 모델이 요청을 받아들입니다.
-    # --------------------------------------------------------------------------
-    # ... (위쪽 코드는 동일) ...
-
-    # 3. Gemini API 요청 주소 (최신 Gemini 2.5 Pro 적용)
-    # [목적] 2025년 최신 모델인 'Gemini 2.5 Pro'를 사용하여 선생님 역할(페르소나) 수행 능력을 극대화합니다.
-    # [결과] AI가 더 자연스럽고 풍부한 감정 표현(이모지 등)으로 학생들과 소통합니다.
-   # 3. Gemini API 요청 주소 (가장 성능이 좋은 1.5 Pro 모델 사용)
-    # [목적] 404 오류 없이 안정적이며, '선생님 페르소나'를 가장 잘 이해하는 모델을 사용합니다.
+    
+    # 3. Gemini API 요청 주소 (최신 Gemini 2.5 flash 적용)
+   
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
     
