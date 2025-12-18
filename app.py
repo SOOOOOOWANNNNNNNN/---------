@@ -5,48 +5,41 @@ import os
 from dotenv import load_dotenv
 
 # --------------------------------------------------------------------------
-# [목적] .env 파일에 저장된 환경 변수(API Key 등)를 불러옵니다.
-# [결과] 코드 안에 비밀번호(API Key)를 적지 않아도, 컴퓨터가 알아서 .env 파일을 찾아 키를 가져옵니다.
+# [목적] .env 파일 또는 스트림릿 클라우드의 Secrets에서 환경 변수(API Key)를 불러옵니다.
+# [결과] 소스 코드에 비밀번호를 노출하지 않고 안전하게 키를 관리할 수 있습니다.
 # --------------------------------------------------------------------------
 load_dotenv() 
 
 # --------------------------------------------------------------------------
-# [목적] 웹사이트의 제목, 아이콘 등 기본 구성을 설정합니다.
-# [결과] 브라우저 탭에 '지리 척척박사님'이 뜨고, 아이콘이 지구 모양(🌏)으로 바뀝니다.
+# [목적] 웹 애플리케이션의 탭 이름, 아이콘, 기본 레이아웃을 설정합니다.
+# [결과] 브라우저 상단 탭에 '지리 척척박사님'이 표시되고, 지구 아이콘이 나타납니다.
 # --------------------------------------------------------------------------
 st.set_page_config(page_title="우리나라 지리 척척박사님", page_icon="🌏")
 
 st.title("🌏 척척박사 지리 선생님")
 st.caption("궁금한 지역을 입력하거나, 왼쪽에서 골라보세요! (예: 독도, 서울)")
 
-
 # --------------------------------------------------------------------------
-# [목적] 환경변수에서 API 키를 가져옵니다.
-# [결과] 사용자가 매번 키를 입력할 필요 없이, 미리 설정된 키로 챗봇이 작동합니다.
+# [목적] 환경변수에서 API 키를 가져옵니다. (로컬: .env / 배포: Secrets)
+# [결과] 사용자가 키를 직접 입력하지 않아도 프로그램이 자동으로 인증 정보를 인식합니다.
 # --------------------------------------------------------------------------
 api_key = os.getenv("GEMINI_API_KEY")
 
-
 # --------------------------------------------------------------------------
-# [목적] 왼쪽 사이드바에 '대표 지역 선택창'을 만듭니다.
-# [결과] 사용자가 타자를 치기 어려울 때, 목록에서 '독도', '제주도' 등을 클릭해서 질문할 수 있습니다.
+# [목적] 왼쪽 사이드바에 대표 지역 선택 기능을 추가하여 사용자 편의성을 높입니다.
+# [결과] 타자가 익숙하지 않은 학생들도 클릭만으로 질문할 수 있는 메뉴가 왼쪽에 생깁니다.
 # --------------------------------------------------------------------------
 with st.sidebar:
     st.header("🗺️ 지역 골라보기")
-    # 사용자가 선택할 수 있는 지역 목록을 만듭니다.
     selected_location = st.selectbox(
         "궁금한 지역을 선택하고 '질문하기'를 눌러보세요!",
         ["직접 입력", "독도", "제주도", "경주", "서울", "부산", "평양"]
     )
-    
-    # [목적] 선택창의 값이 바뀔 때마다 실행되는 것이 아니라, 버튼을 눌렀을 때 질문이 전송되게 합니다.
-    # [결과] '질문하기' 버튼을 누르면 해당 지역에 대한 설명이 채팅창에 뜹니다.
     is_sidebar_clicked = st.button("이 지역 질문하기")
 
-
 # --------------------------------------------------------------------------
-# [목적] AI 선생님의 말투와 역할(페르소나)을 상세하게 설정합니다.
-# [결과] AI가 기계적인 답변 대신, 이모지를 섞은 친절한 유치원 선생님 말투로 지리 정보를 설명합니다.
+# [목적] AI에게 '친절한 유치원 선생님' 역할을 부여하고 답변 형식을 지정합니다.
+# [결과] AI가 기계적인 정보 대신, 아이들 눈높이에 맞춘 다정한 말투와 이모지를 사용합니다.
 # --------------------------------------------------------------------------
 system_instruction = """
 당신은 아이들을 정말 사랑하는 5년 차 베테랑 유치원 선생님입니다. 
@@ -60,78 +53,73 @@ system_instruction = """
 4. 만약 지리적 지명이 아닌 질문을 하면 "선생님은 지리 공부만 도와줄 수 있어요~ 다른 지역을 물어봐 줄래요? 🗺️"라고 답해주세요.
 """
 
-
 # --------------------------------------------------------------------------
-# [목적] 대화 기록이 사라지지 않도록 저장할 공간(session_state)을 만듭니다.
-# [결과] 화면이 새로고침 되어도 이전에 나눈 대화 내용이 유지됩니다.
+# [목적] 새로고침 시 대화 내용이 사라지는 것을 방지하기 위해 저장소를 초기화합니다.
+# [결과] 이전 대화 기록이 유지되어 문맥이 끊기지 않는 채팅 경험을 제공합니다.
 # --------------------------------------------------------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-
 # --------------------------------------------------------------------------
-# [목적] 저장된 대화 내용을 화면에 순서대로 표시합니다.
-# [결과] 카카오톡처럼 사용자와 선생님의 대화가 말풍선으로 나열되어 보입니다.
+# [목적] 저장된 대화 기록을 화면에 순서대로 다시 표시합니다.
+# [결과] 사용자와 AI가 주고받은 말풍선들이 채팅창 형태로 유지됩니다.
 # --------------------------------------------------------------------------
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-
 # --------------------------------------------------------------------------
-# [목적] 질문을 받는 두 가지 방법(직접 입력 vs 사이드바 선택)을 처리합니다.
-# [결과] 하단 입력창에 글을 쓰거나, 사이드바 버튼을 눌렀을 때 모두 동일하게 AI에게 질문이 전송됩니다.
+# [목적] 직접 입력과 사이드바 선택, 두 가지 방식을 통합하여 질문을 처리합니다.
+# [결과] 어디서 입력을 하든 동일하게 AI에게 질문이 전달됩니다.
 # --------------------------------------------------------------------------
 prompt = None
 if user_input := st.chat_input("지역 이름을 입력해볼까요?"):
-    prompt = user_input  # 사용자가 직접 타이핑한 경우
+    prompt = user_input
 elif is_sidebar_clicked and selected_location != "직접 입력":
-    prompt = selected_location  # 사이드바에서 선택하고 버튼을 누른 경우
+    prompt = selected_location
 
-
-# 질문(prompt)이 들어왔을 때 실행되는 로직
 if prompt:
-    
-    # 1. 사용자 메시지 화면 표시 및 저장
+    # 사용자 메시지 표시
     with st.chat_message("user"):
         st.markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # 2. API 키 확인 (없으면 경고)
+    # API 키 확인
     if not api_key:
-        st.error("API 키를 찾을 수 없어요. .env 파일을 확인해주세요! 🔑")
+        st.error("API 키가 설정되지 않았습니다. Secrets 설정을 확인해주세요.")
         st.stop()
 
-    # 3. Gemini API 요청 주소 (Gemini 1.5 Pro 사용)
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={api_key}"
+    # --------------------------------------------------------------------------
+    # [목적] 가장 안정적인 Gemini Pro 모델을 호출하여 API 통신을 수행합니다.
+    # [결과] 404 오류를 방지하고 AI 모델이 요청을 받아들입니다.
+    # --------------------------------------------------------------------------
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
-    
     payload = {
-        "system_instruction": {
-            "parts": [{"text": system_instruction}] 
-        },
-        "contents": [{
-            "parts": [{"text": prompt}] 
-        }]
+        "contents": [{"parts": [{"text": system_instruction + "\n\n질문: " + prompt}]}]
     }
 
-    # 4. 응답 수신 및 화면 표시
-    # [목적] 구글 서버에서 온 응답을 해석하여 화면에 보여줍니다.
-    # [결과] '생각 중...' 로딩 문구 후 선생님의 친절한 답변이 출력됩니다.
+    # 응답 처리 및 예외 처리
     with st.chat_message("assistant"):
-        message_placeholder = st.empty() 
-        message_placeholder.markdown("선생님이 지도책을 펼치고 있어요... 📖") 
+        message_placeholder = st.empty()
+        message_placeholder.markdown("선생님이 생각하고 있어요... 🤔")
         
         try:
             response = requests.post(url, headers=headers, data=json.dumps(payload))
             
+            # [목적] 응답 상태 코드에 따라 성공과 실패(429, 404 등)를 구분하여 처리합니다.
             if response.status_code == 200:
                 result = response.json()
                 bot_response = result['candidates'][0]['content']['parts'][0]['text']
-                
                 message_placeholder.markdown(bot_response)
                 st.session_state.messages.append({"role": "assistant", "content": bot_response})
+            
+            elif response.status_code == 429:
+                # [결과] 요청 횟수 초과 시 사용자에게 대기하라는 안내 메시지를 띄웁니다.
+                message_placeholder.error("질문이 너무 많아요! 1분만 쉬었다가 다시 물어봐주세요. 😅")
+            
             else:
-                message_placeholder.error(f"오류가 났어요: {response.status_code}")
+                message_placeholder.error(f"오류가 발생했습니다: {response.status_code}")
+                
         except Exception as e:
-            message_placeholder.error(f"문제가 발생했어요: {e}")
+            message_placeholder.error(f"네트워크 문제가 발생했습니다: {e}")
