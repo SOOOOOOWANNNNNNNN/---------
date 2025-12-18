@@ -93,7 +93,16 @@ if prompt:
     # [목적] 가장 안정적인 Gemini Pro 모델을 호출하여 API 통신을 수행합니다.
     # [결과] 404 오류를 방지하고 AI 모델이 요청을 받아들입니다.
     # --------------------------------------------------------------------------
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-exp:generateContent?key={api_key}"
+    # ... (위쪽 코드는 동일) ...
+
+    # 3. Gemini API 요청 주소 (최신 Gemini 2.5 Pro 적용)
+    # [목적] 2025년 최신 모델인 'Gemini 2.5 Pro'를 사용하여 선생님 역할(페르소나) 수행 능력을 극대화합니다.
+    # [결과] AI가 더 자연스럽고 풍부한 감정 표현(이모지 등)으로 학생들과 소통합니다.
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key={api_key}"
+    
+    headers = {'Content-Type': 'application/json'}
+    
+    # ... (아래쪽 코드는 동일) ...
     headers = {'Content-Type': 'application/json'}
     payload = {
         "contents": [{"parts": [{"text": system_instruction + "\n\n질문: " + prompt}]}]
