@@ -1,110 +1,80 @@
 import streamlit as st
-import google.generativeai as genai
-import os
-from dotenv import load_dotenv
+import requests
+import json
 
-load_dotenv()
+# 페이지 설정
+st.set_page_config(page_title="우리나라 지리 척척박사님", page_icon="🌏")
 
-# [1] 페이지 설정
-# 목적: 웹 브라우저 탭의 제목과 아이콘을 설정하고, 화면 상단에 제목을 표시하기 위함.
-# 결과: 브라우저 탭에 '우리 반 AI 선생님'이 보이고, 메인 화면에 제목과 설명이 나타남.
-st.set_page_config(page_title="우리 반 AI 선생님", page_icon="🤖")
-st.title("🤖 무엇이든 물어보세요 (초등학생 전용)")
-st.caption("안전하고 정확한 정보를 알려주는 AI 선생님입니다.")
+st.title("🌏 척척박사 지리 선생님")
+st.caption("궁금한 지역 이름을 입력하면 선생님이 친절하게 알려줄게요! (예: 독도, 서울, 부산)")
 
-# [2] API 키 설정 
-# [2] API 키 설정
-# 목적: .env 파일이나 스트림릿 시크릿에서 Google API 키를 불러와 AI 서비스를 인증하기 위함.
-# 결과: 키가 없으면 오류 메시지가 표시되고, 키가 있으면 AI 모델을 사용할 준비가 완료됨.
-if os.getenv("GOOGLE_API_KEY"):
-    api_key = os.getenv("GOOGLE_API_KEY")
-    genai.configure(api_key=api_key)
-elif "GEMINI_API_KEY" in st.secrets:
-    api_key = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=api_key)
-else:
-    st.error("API 키가 설정되지 않았습니다.")
-    st.error("API 키가 설정되지 않았습니다. .env 파일을 확인해주세요.")
-    st.stop()
+# 사이드바에서 API 키 입력 받기
+with st.sidebar:
+    api_key = st.text_input("Gemini API Key를 입력하세요", type="password")
+    st.markdown("[Google AI Studio](https://aistudio.google.com/)에서 키를 발급받으세요.")
 
-# [3] 안전 규칙 프롬프트 (내용은 동일)
-safety_system_prompt = """
-당신은 아이들을 사랑하는 5년 차 베테랑 초등학교 선생님입니다. 🏫
-사용자가 지명(나라, 도시 등)을 입력하면, 그곳의 **위치**, **특징**, **인구수** 등을 초등학생 눈높이에서 쉽고 재미있게 설명해 주세요.
-
-지켜야 할 약속 🤙:
-1. **말투**: 아주 다정하고 친절한 초등학교 선생님 말투를 사용하세요. (예: "우리 친구, 그곳이 궁금했군요!")
-2. **이모지 사용**: 모든 답변에 이모지를 듬뿍 사용해서 알록달록하고 재미있게 만들어 주세요! 🌈✨
-3. **설명 내용**:
-    - 📍 **위치**: 어디에 있는지 쉽게 알려주세요.
-    - 🌟 **특징**: 무엇이 유명한지 재미있는 이야기를 들려주세요.
-    - 👨‍👩‍👧‍👦 **인구수**: 얼마나 많은 사람이 살고 있는지 알려주세요.
-4. **눈높이 교육**: 어려운 단어는 피하고, 쉬운 비유를 사용해 주세요.
+# 시스템 프롬프트 설정 (선생님 페르소나 & 지리 정보 미션)
+system_instruction = """
+당신은 아이들을 정말 사랑하는 5년 차 베테랑 유치원 선생님입니다. 
+다음 원칙을 지켜서 답변해주세요:
+1. 말투: "친구들~", "~해요" 처럼 아주 친절하고 다정하게 존댓말을 사용하세요.
+2. 필수: 답변에는 반드시 이모지(😊, 🌳, 🌊 등)를 아주 풍부하게 섞어서 사용하세요.
+3. 임무: 사용자가 '지역 이름'을 물어보면, 초등학생 눈높이에 맞춰서 다음 내용을 설명해 주세요.
+   - 📍 위치: 어디에 있는지
+   - ✨ 특징: 무엇이 유명한지, 어떤 재미있는 점이 있는지
+   - 👨‍👩‍👧‍👦 인구수: 대략 얼마나 많은 사람이 살고 있는지 (어려운 숫자는 '아주 많은 사람' 등으로 비유해도 좋아요)
+4. 만약 지리적 지명이 아닌 질문을 하면 "선생님은 지리 공부만 도와줄 수 있어요~ 다른 지역을 물어봐 줄래요? 🗺️"라고 답해주세요.
 """
 
-# [4] 모델 설정 (오류 방지를 위해 system_instruction 제거)
-# 구버전 라이브러리에서도 100% 작동하도록 기본 설정만 사용합니다.
-model = genai.GenerativeModel("gemini-1.5-flash")
-# [4] 모델 설정
-# 목적: 위에서 정의한 시스템 프롬프트를 적용하여 Gemini-1.5-flash 모델을 불러오기 위함.
-# 결과: AI가 선생님 역할을 수행할 준비가 된 상태로 모델이 생성됨.
-model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
-    system_instruction=system_prompt
-)
-
-# [5] 세션 상태 초기화 (여기가 핵심!)
-# 시스템 설정을 '채팅 기록'의 맨 처음에 강제로 넣어서, AI가 선생님 역할을 하도록 만듭니다.
-# [5] 세션 상태 초기화
-# 목적: 사용자와 AI의 대화 기록을 저장할 리스트를 생성하여, 화면이 새로고침되어도 대화가 유지되도록 하기 위함.
-# 결과: 'messages'라는 저장소가 생성되어 대화를 기록할 준비가 됨.
+# 채팅 기록 초기화
 if "messages" not in st.session_state:
-    st.session_state.messages = [
-        # 사용자가 말한 것처럼 시스템 프롬프트를 먼저 주입
-        {"role": "user", "content": safety_system_prompt},
-        # AI가 알겠다고 대답한 것처럼 기록 조작
-        {"role": "model", "content": "네, 알겠습니다. 저는 초등학교 선생님으로서 학생들의 눈높이에 맞춰 친절하고 안전하게 답변하겠습니다."}
-    ]
     st.session_state.messages = []
 
-# [6] 대화 기록 표시
-# 목적: 저장된 대화 기록(messages)을 순서대로 읽어와 화면에 채팅 말풍선으로 보여주기 위함.
-# 결과: 사용자가 이전에 나눈 질문과 답변이 채팅창에 그대로 표시됨.
+# 이전 대화 표시
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# [7] 사용자 입력 및 답변 처리
-# 목적: 사용자의 입력을 받아 화면에 표시하고, AI에게 전달하여 답변을 생성한 뒤 화면에 출력하기 위함.
-# 결과: 사용자가 질문을 입력하면 채팅창에 질문이 뜨고, 잠시 후 AI 선생님의 답변이 아래에 나타남.
-if prompt := st.chat_input("궁금한 것을 물어보세요!"):
-    # 사용자 메시지 표시 및 저장
-    st.chat_message("user").markdown(prompt)
+# 사용자 입력 처리
+if prompt := st.chat_input("지역 이름을 입력해볼까요?"):
+    # 1. 사용자 메시지 표시 및 저장
+    with st.chat_message("user"):
+        st.markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    with st.chat_message("assistant"):
-        with st.spinner("선생님이 생각하고 있어요..."):
-            try:
-                # 저장된 모든 대화 기록(시스템 설정 포함)을 AI에게 전달
-                chat_history = [
-                    {"role": m["role"], "parts": [m["content"]]}
-                    for m in st.session_state.messages
-                ]
-                
-                # generate_content로 변경 (호환성이 가장 좋음)
-                # 대화 기록 변환 (Streamlit -> Gemini)
-                chat_history = []
-                for msg in st.session_state.messages:
-                    # Streamlit의 'assistant'를 Gemini의 'model'로 변환
-                    role = "model" if msg["role"] == "assistant" else "user"
-                    chat_history.append({"role": role, "parts": [msg["content"]]})
+    # 2. API 키 확인
+    if not api_key:
+        st.error("선생님을 만나려면 API 키가 필요해요! 왼쪽 사이드바에 입력해주세요. 🔑")
+        st.stop()
 
-                # API 요청
-                response = model.generate_content(chat_history)
+    # 3. Gemini API 요청 (System Instruction 포함)
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    headers = {'Content-Type': 'application/json'}
+    
+    payload = {
+        "system_instruction": {
+            "parts": [{"text": system_instruction}]
+        },
+        "contents": [{
+            "parts": [{"text": prompt}] 
+        }]
+    }
+
+    # 4. 응답 받아오기
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+        message_placeholder.markdown("선생님이 생각하고 있어요... 🤔")
+        
+        try:
+            response = requests.post(url, headers=headers, data=json.dumps(payload))
+            
+            if response.status_code == 200:
+                result = response.json()
+                bot_response = result['candidates'][0]['content']['parts'][0]['text']
                 
-                st.markdown(response.text)
-                st.session_state.messages.append({"role": "model", "content": response.text})
-                st.session_state.messages.append({"role": "assistant", "content": response.text})
-            except Exception as e:
-                # 오류 메시지를 좀 더 자세히 출력
-                st.error(f"오류가 발생했습니다: {e}")
+                message_placeholder.markdown(bot_response)
+                st.session_state.messages.append({"role": "assistant", "content": bot_response})
+            else:
+                message_placeholder.error(f"오류가 났어요 ㅠㅠ: {response.text}")
+        except Exception as e:
+            message_placeholder.error(f"문제가 발생했어요: {e}")
