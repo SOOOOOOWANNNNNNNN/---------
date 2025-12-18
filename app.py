@@ -100,7 +100,7 @@ if prompt:
     # [결과] AI가 더 자연스럽고 풍부한 감정 표현(이모지 등)으로 학생들과 소통합니다.
    # 3. Gemini API 요청 주소 (가장 성능이 좋은 1.5 Pro 모델 사용)
     # [목적] 404 오류 없이 안정적이며, '선생님 페르소나'를 가장 잘 이해하는 모델을 사용합니다.
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
     
     # ... (아래쪽 코드는 동일) ...
