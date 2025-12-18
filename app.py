@@ -103,7 +103,8 @@ if prompt:
         st.stop()
 
     # 3. Gemini API 요청 주소 (Gemini 1.5 Pro 사용)
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={api_key}"
+    # 가장 안정적인 'gemini-pro' (1.0 버전) 모델을 사용합니다.
+url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
     
     payload = {
