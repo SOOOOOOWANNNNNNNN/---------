@@ -103,10 +103,7 @@ if prompt:
         st.stop()
 
     # 3. Gemini API 요청 주소 (Gemini 1.5 Pro 사용)
-    # 3. Gemini API 요청 주소 (Gemini Pro 사용)
-    # [목적] 404 오류 방지를 위해, 가장 호환성이 높고 안정적인 'gemini-pro' 모델을 호출합니다.
-    # [결과] 모델 이름을 찾지 못하는 문제를 해결하고, AI가 정상적으로 질문에 응답합니다.
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key={api_key}"
     headers = {'Content-Type': 'application/json'}
     
     payload = {
